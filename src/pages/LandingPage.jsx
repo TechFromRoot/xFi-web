@@ -2,12 +2,12 @@ import React from 'react';
 
 export default function LandingPage() {
     return (
-        <div className="min-h-screen flex items-center justify-center bg-black text-white py-10">
-            <div className="w-full max-w-max min-w-[60vh] border-2 border-gray-700 rounded-2xl p-10 text-center flex flex-col justify-between min-h-[80vh] max-h-[90vh]">
+        <div className="min-h-screen flex items-center justify-center bg-black text-white py-10 px-4">
+            <div className="w-full max-w-lg border-2 border-gray-700 rounded-2xl p-10 text-center flex flex-col justify-between min-h-[80vh] max-h-[90vh]">
                 <div>
-                    <img src="/xFi-logo.png" alt="xFi" className="w-48 mx-auto mb-25 mt-3" />
+                    <img src="/xFi-logo.png" alt="xFi" className="w-48 mx-auto mb-6 mt-3" />
                     <p className="text-gray-400 mb-10 text-lg">
-                        Perform DeFi actions directly on twitter.
+                        Perform DeFi actions directly on Twitter.
                     </p>
                 </div>
                 <div>
@@ -18,4 +18,4 @@ export default function LandingPage() {
             </div>
         </div>
     );
-};
+}

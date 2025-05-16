@@ -60,8 +60,8 @@ export default function HomePage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-black text-gray-200 py-10">
-            <div className="w-full max-w-max min-w-[60vh] flex flex-col gap-8 justify-center">
+        <div className="min-h-screen flex items-center justify-center bg-black text-gray-200 py-10 px-4">
+            <div className="w-full max-w-xl flex flex-col gap-8 justify-center">
                 {/* User Info */}
                 <div className="border border-gray-700 rounded-2xl p-6">
                     <h2 className="text-2xl font-semibold text-gray-300 mb-4">User Details</h2>
@@ -90,8 +90,8 @@ export default function HomePage() {
                                 className="bg-black border border-gray-600 rounded px-2 py-1 text-white hover:cursor-pointer"
                             >
                                 <option value="" disabled>Select chain</option>
-                                <option className='hover:cursor-pointer' value="Base">Base</option>
-                                <option className='hover:cursor-pointer' value="Polygon">Polygon</option>
+                                <option className="hover:cursor-pointer" value="Base">Base</option>
+                                <option className="hover:cursor-pointer" value="Polygon">Polygon</option>
                             </select>
                         </div>
                     </div>
@@ -118,7 +118,8 @@ export default function HomePage() {
                                     <div className="text-right">
                                         <div className="text-base font-semibold mb-1">{tx.amount}</div>
                                         <span className={`text-xs px-2 py-1 rounded-full font-medium inline-block mt-1 whitespace-nowrap ${tx.status === 'Success' ? 'bg-green-700 text-white' :
-                                            tx.status === 'Pending' ? 'bg-yellow-600 text-black' : 'bg-red-700 text-white'
+                                                tx.status === 'Pending' ? 'bg-yellow-600 text-black' :
+                                                    'bg-red-700 text-white'
                                             }`}>
                                             {tx.status}
                                         </span>
