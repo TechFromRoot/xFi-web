@@ -30,8 +30,8 @@ export default function HomePage() {
         try {
             const res = await fetch(`https://app.eventblink.xyz/xfi/users/${id}`);
             const data = await res.json();
+            if (data.chains === null) data.chains = [];
             setUser(data);
-            if(data.chains === null) data.chains = [];
             setSelectedChains(data.chains);
         } catch (err) {
             console.error('Failed to fetch user:', err);
@@ -41,9 +41,20 @@ export default function HomePage() {
     const fetchTransactions = async (id) => {
         try {
             const res = await fetch(`https://app.eventblink.xyz/xfi/users/history/${id}`);
+            if (!res.ok) {
+                console.warn(`Transaction fetch failed: ${res.status}`);
+                setTransactions([]);
+                return;
+            }
             const data = await res.json();
-            setTransactions(data);
+            if (Array.isArray(data)) {
+                setTransactions(data);
+            } else {
+                console.warn("Unexpected response for transactions:", data);
+                setTransactions([]);
+            }
         } catch (err) {
+            setTransactions([]);
             console.error('Failed to fetch transactions:', err);
         }
     };
@@ -73,9 +84,10 @@ export default function HomePage() {
         address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '';
 
     const trimDescription = (desc, length = 40) =>
-        desc.length > length ? `${desc.slice(0, length)}...` : desc;
+        desc?.length > length ? `${desc.slice(0, length)}...` : desc || '';
 
     const copyToClipboard = (value, setCopied) => {
+        if (!value) return;
         navigator.clipboard.writeText(value);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -92,8 +104,8 @@ export default function HomePage() {
                 <div className="border border-gray-700 rounded-2xl p-6">
                     <h2 className="text-2xl font-semibold text-gray-300 mb-4">User Details</h2>
                     <div className="space-y-4">
-                        <InfoRow title="Username" value={`@${user.username}`} />
-                        <InfoRow title="Name" value={user.name} />
+                        <InfoRow title="Username" value={user.username ? `@${user.username}` : '-'} />
+                        <InfoRow title="Name" value={user.name || '-'} />
                         <div className="flex justify-between items-center">
                             <span className="text-gray-400">Address (EVM)</span>
                             <div className="flex flex-col items-end">
@@ -120,7 +132,7 @@ export default function HomePage() {
                                 {copied2 && <span className="text-xs text-green-400 mt-1">Copied!</span>}
                             </div>
                         </div>
-                        <InfoRow title="Balance" value={user.balance} />
+                        <InfoRow title="Balance" value={user.balance || 0} />
                         <div className="flex justify-between items-start gap-4">
                             <span className="text-gray-400 mt-1">Selected Chains</span>
                             <div className="flex flex-col gap-2">
@@ -154,8 +166,11 @@ export default function HomePage() {
                                     className="border border-gray-600 rounded-xl p-4 flex justify-between items-start"
                                 >
                                     <div className="flex flex-col max-w-[60%]">
-                                        <span className="text-base font-medium truncate mb-2" title={removeAtUsername(tx.meta.originalCommand)}>
-                                            {trimDescription(removeAtUsername(tx.meta.originalCommand))}
+                                        <span
+                                            className="text-base font-medium truncate mb-2"
+                                            title={removeAtUsername(tx.meta?.originalCommand || '')}
+                                        >
+                                            {trimDescription(removeAtUsername(tx.meta?.originalCommand || ''))}
                                         </span>
                                         <span className="text-sm text-gray-500">{formatDate(tx.createdAt)}</span>
                                     </div>
