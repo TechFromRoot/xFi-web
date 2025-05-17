@@ -10,7 +10,7 @@ export default function LandingPage() {
         <div className="min-h-screen flex items-center justify-center bg-black text-white py-10 px-4">
             <div className="absolute top-12 right-4">
                 <a
-                    href="https://twitter.com/xfi_xyz_bot"
+                    href="https://x.com/xFi_bot"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-white mr-[15vw] hover:text-blue-400 transition"
