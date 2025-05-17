@@ -7,7 +7,8 @@ export default function HomePage() {
     const [user, setUser] = useState(null);
     const [transactions, setTransactions] = useState([]);
     const [selectedChains, setSelectedChains] = useState([]);
-    const [copied, setCopied] = useState(false);
+    const [copied1, setCopied1] = useState(false);
+    const [copied2, setCopied2] = useState(false);
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -29,11 +30,10 @@ export default function HomePage() {
         try {
             const res = await fetch(`https://app.eventblink.xyz/xfi/users/${id}`);
             const data = await res.json();
-            console.log(data);
             setUser(data);
-            setSelectedChains(data.chain); // assuming chain is part of data
+            if(data.chains === null) data.chains = [];
+            setSelectedChains(data.chains);
         } catch (err) {
-            console.log('Failed to fetch user:', err);
             console.error('Failed to fetch user:', err);
         }
     };
@@ -42,16 +42,19 @@ export default function HomePage() {
         try {
             const res = await fetch(`https://app.eventblink.xyz/xfi/users/history/${id}`);
             const data = await res.json();
-            console.log(data);
             setTransactions(data);
         } catch (err) {
             console.error('Failed to fetch transactions:', err);
         }
     };
 
-    const handleChainChange = async (e) => {
-        const selectedOptions = Array.from(e.target.selectedOptions).map(opt => opt.value);
-        setSelectedChains(selectedOptions);
+    const handleChainChange = async (chain, checked) => {
+        const updatedChains = checked
+            ? [...selectedChains, chain]
+            : selectedChains.filter(c => c !== chain);
+
+        setSelectedChains(updatedChains);
+
         const userId = localStorage.getItem("twitterId");
         try {
             await fetch(`https://app.eventblink.xyz/xfi/users/${userId}`, {
@@ -59,9 +62,7 @@ export default function HomePage() {
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({
-                    chains: selectedOptions,
-                }),
+                body: JSON.stringify({ chains: updatedChains }),
             });
         } catch (err) {
             console.error("Failed to update chains", err);
@@ -74,14 +75,14 @@ export default function HomePage() {
     const trimDescription = (desc, length = 40) =>
         desc.length > length ? `${desc.slice(0, length)}...` : desc;
 
-    const copyToClipboard = (value) => {
+    const copyToClipboard = (value, setCopied) => {
         navigator.clipboard.writeText(value);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
 
     if (!user) {
-        return <div className="text-white text-center mt-20">Loading user data...</div>;
+        return <div></div>;
     }
 
     return (
@@ -97,41 +98,45 @@ export default function HomePage() {
                             <span className="text-gray-400">Address (EVM)</span>
                             <div className="flex flex-col items-end">
                                 <button
-                                    onClick={() => copyToClipboard(user.evmWalletAddress)}
+                                    onClick={() => copyToClipboard(user.evmWalletAddress, setCopied1)}
                                     className="bg-gray-800 text-white px-3 py-1 rounded text-sm border border-gray-600 hover:bg-gray-700 transition font-mono hover:cursor-pointer"
                                     title="Click to copy"
                                 >
-                                    {shortenAddress(user.address)}
+                                    {shortenAddress(user.evmWalletAddress)}
                                 </button>
-                                {copied && <span className="text-xs text-green-400 mt-1">Copied!</span>}
+                                {copied1 && <span className="text-xs text-green-400 mt-1">Copied!</span>}
                             </div>
                         </div>
                         <div className="flex justify-between items-center">
                             <span className="text-gray-400">Address (SVM)</span>
                             <div className="flex flex-col items-end">
                                 <button
-                                    onClick={() => copyToClipboard(user.address)}
+                                    onClick={() => copyToClipboard(user.svmWalletAddress, setCopied2)}
                                     className="bg-gray-800 text-white px-3 py-1 rounded text-sm border border-gray-600 hover:bg-gray-700 transition font-mono hover:cursor-pointer"
                                     title="Click to copy"
                                 >
                                     {shortenAddress(user.svmWalletAddress)}
                                 </button>
-                                {copied && <span className="text-xs text-green-400 mt-1">Copied!</span>}
+                                {copied2 && <span className="text-xs text-green-400 mt-1">Copied!</span>}
                             </div>
                         </div>
                         <InfoRow title="Balance" value={user.balance} />
-                        <div className="flex justify-between items-center">
-                            <span className="text-gray-400">Selected Chains</span>
-                            <select
-                                multiple
-                                value={selectedChains}
-                                onChange={handleChainChange}
-                                className="bg-black border border-gray-600 rounded px-2 py-1 text-white hover:cursor-pointer"
-                            >
-                                <option value="Solana">Solana</option>
-                                <option value="Ethereum">Ethereum</option>
-                                <option value="Base">Base</option>
-                            </select>
+                        <div className="flex justify-between items-start gap-4">
+                            <span className="text-gray-400 mt-1">Selected Chains</span>
+                            <div className="flex flex-col gap-2">
+                                {["Solana", "Ethereum", "Base"].map((chain) => (
+                                    <label key={chain} className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            value={chain}
+                                            checked={selectedChains.includes(chain)}
+                                            onChange={(e) => handleChainChange(e.target.value, e.target.checked)}
+                                            className="accent-gray-600"
+                                        />
+                                        <span>{chain}</span>
+                                    </label>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
