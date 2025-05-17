@@ -136,7 +136,7 @@ export default function HomePage() {
                         <div className="flex justify-between items-start gap-4">
                             <span className="text-gray-400 mt-1">Selected Chains</span>
                             <div className="flex flex-col gap-2">
-                                {["Solana", "Ethereum", "Base"].map((chain) => (
+                                {["Solana", "Base", "Ethereum"].map((chain) => (
                                     <label key={chain} className="flex items-center gap-2">
                                         <input
                                             type="checkbox"
