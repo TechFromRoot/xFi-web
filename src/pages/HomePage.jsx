@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+import { FaXTwitter } from 'react-icons/fa6';
 
 export default function HomePage() {
     const location = useLocation();
@@ -7,8 +9,9 @@ export default function HomePage() {
     const [user, setUser] = useState(null);
     const [transactions, setTransactions] = useState([]);
     const [selectedChains, setSelectedChains] = useState([]);
-    const [copied1, setCopied1] = useState(false);
-    const [copied2, setCopied2] = useState(false);
+    const [openWallet, setOpenWallet] = useState(null);
+    const [evmBalances, setEvmBalances] = useState({});
+    const [svmBalances, setSvmBalances] = useState({});
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -23,6 +26,7 @@ export default function HomePage() {
         if (twitterId) {
             fetchUserData(twitterId);
             fetchTransactions(twitterId);
+            fetchAllBalances(twitterId);
         }
     }, [location.search]);
 
@@ -41,21 +45,48 @@ export default function HomePage() {
     const fetchTransactions = async (id) => {
         try {
             const res = await fetch(`https://app.eventblink.xyz/xfi/users/history/${id}`);
-            if (!res.ok) {
-                console.warn(`Transaction fetch failed: ${res.status}`);
-                setTransactions([]);
-                return;
-            }
             const data = await res.json();
-            if (Array.isArray(data)) {
-                setTransactions(data);
-            } else {
-                console.warn("Unexpected response for transactions:", data);
-                setTransactions([]);
-            }
+            setTransactions(Array.isArray(data) ? data : []);
         } catch (err) {
-            setTransactions([]);
             console.error('Failed to fetch transactions:', err);
+            setTransactions([]);
+        }
+    };
+
+    const fetchAllBalances = async (userId) => {
+        const chains = ['ethereum', 'base'];
+        const evmResult = {};
+
+        for (let chain of chains) {
+            try {
+                const res = await fetch(`https://app.eventblink.xyz/xfi/users/${userId}/evm-balance?chain=${chain}`);
+                const data = await res.json();
+
+                evmResult[capitalize(chain)] = data.map(({ tokenSymbol, tokenName, amount }) => ({
+                    symbol: tokenSymbol,
+                    name: tokenName,
+                    amount: parseFloat(amount).toFixed(4),
+                }));
+            } catch (err) {
+                console.error(`Failed to fetch ${chain} balances:`, err);
+            }
+        }
+
+        setEvmBalances(evmResult);
+
+        try {
+            const res = await fetch(`https://app.eventblink.xyz/xfi/users/${userId}/svm-balance`);
+            const data = await res.json();
+
+            const svm = data.map(({ tokenSymbol, tokenName, amount }) => ({
+                symbol: tokenSymbol,
+                name: tokenName,
+                amount: parseFloat(amount).toFixed(4),
+            }));
+
+            setSvmBalances({ Solana: svm });
+        } catch (err) {
+            console.error("Failed to fetch SVM balances", err);
         }
     };
 
@@ -70,9 +101,7 @@ export default function HomePage() {
         try {
             await fetch(`https://app.eventblink.xyz/xfi/users/${userId}`, {
                 method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ chains: updatedChains }),
             });
         } catch (err) {
@@ -80,59 +109,62 @@ export default function HomePage() {
         }
     };
 
-    const shortenAddress = (address) =>
-        address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '';
-
     const trimDescription = (desc, length = 40) =>
         desc?.length > length ? `${desc.slice(0, length)}...` : desc || '';
 
-    const copyToClipboard = (value, setCopied) => {
-        if (!value) return;
-        navigator.clipboard.writeText(value);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
-
-    if (!user) {
-        return <div></div>;
-    }
+    if (!user) return <div></div>;
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-black text-gray-200 py-10 px-4">
+            <div className="absolute top-12 right-4">
+                <a
+                    href="https://twitter.com/xfi_xyz_bot"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-white mr-[15vw] hover:text-blue-400 transition"
+                    title="Launch xFI Bot on Twitter"
+                >
+                    <FaXTwitter size={24} />
+                </a>
+            </div>
             <div className="w-full max-w-xl flex flex-col gap-8 justify-center">
-                {/* User Info */}
                 <div className="border border-gray-700 rounded-2xl p-6">
                     <h2 className="text-2xl font-semibold text-gray-300 mb-4">User Details</h2>
                     <div className="space-y-4">
-                        <InfoRow title="Username" value={user.username ? `@${user.username}` : '-'} />
-                        <InfoRow title="Name" value={user.name || '-'} />
-                        <div className="flex justify-between items-center">
-                            <span className="text-gray-400">Address (EVM)</span>
-                            <div className="flex flex-col items-end">
-                                <button
-                                    onClick={() => copyToClipboard(user.evmWalletAddress, setCopied1)}
-                                    className="bg-gray-800 text-white px-3 py-1 rounded text-sm border border-gray-600 hover:bg-gray-700 transition font-mono hover:cursor-pointer"
-                                    title="Click to copy"
-                                >
-                                    {shortenAddress(user.evmWalletAddress)}
-                                </button>
-                                {copied1 && <span className="text-xs text-green-400 mt-1">Copied!</span>}
-                            </div>
+                        <InfoRow
+                            title="Username"
+                            value={
+                                user.username ? (
+                                    <a
+                                        href={`https://twitter.com/${user.username}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-200 hover:text-blue-400 underline transition"
+                                    >
+                                        @{user.username}
+                                    </a>
+                                ) : (
+                                    '-'
+                                )
+                            }
+                        />
+                        <InfoRow title="Display Name" value={user.name || '-'} />
+                        <div className="space-y-6 text-white">
+                            <BalanceSection
+                                title="EVM Wallet"
+                                address={user.evmWalletAddress}
+                                chains={evmBalances}
+                                isOpen={openWallet === 'EVM'}
+                                onToggle={() => setOpenWallet(openWallet === 'EVM' ? null : 'EVM')}
+                            />
+                            <BalanceSection
+                                title="SVM Wallet"
+                                address={user.svmWalletAddress}
+                                chains={svmBalances}
+                                isOpen={openWallet === 'SVM'}
+                                onToggle={() => setOpenWallet(openWallet === 'SVM' ? null : 'SVM')}
+                            />
                         </div>
-                        <div className="flex justify-between items-center">
-                            <span className="text-gray-400">Address (SVM)</span>
-                            <div className="flex flex-col items-end">
-                                <button
-                                    onClick={() => copyToClipboard(user.svmWalletAddress, setCopied2)}
-                                    className="bg-gray-800 text-white px-3 py-1 rounded text-sm border border-gray-600 hover:bg-gray-700 transition font-mono hover:cursor-pointer"
-                                    title="Click to copy"
-                                >
-                                    {shortenAddress(user.svmWalletAddress)}
-                                </button>
-                                {copied2 && <span className="text-xs text-green-400 mt-1">Copied!</span>}
-                            </div>
-                        </div>
-                        <InfoRow title="Balance" value={user.balance || 0} />
                         <div className="flex justify-between items-start gap-4">
                             <span className="text-gray-400 mt-1">Selected Chains</span>
                             <div className="flex flex-col gap-2">
@@ -153,7 +185,6 @@ export default function HomePage() {
                     </div>
                 </div>
 
-                {/* Transactions */}
                 <div className="border border-gray-700 rounded-2xl p-6">
                     <h2 className="text-2xl font-semibold text-gray-300 mb-4">Transactions</h2>
                     {transactions.length === 0 ? (
@@ -161,10 +192,7 @@ export default function HomePage() {
                     ) : (
                         <ul className="space-y-4">
                             {transactions.map((tx, idx) => (
-                                <li
-                                    key={idx}
-                                    className="border border-gray-600 rounded-xl p-4 flex justify-between items-start"
-                                >
+                                <li key={idx} className="border border-gray-600 rounded-xl p-4 flex justify-between items-start">
                                     <div className="flex flex-col max-w-[60%]">
                                         <span
                                             className="text-base font-medium truncate mb-2"
@@ -192,6 +220,13 @@ export default function HomePage() {
     );
 }
 
+function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+const shortenAddress = (address) =>
+    address ? `${address.slice(0, 6)}...${address.slice(-4)}` : '';
+
 function InfoRow({ title, value }) {
     return (
         <div className="flex justify-between items-center">
@@ -199,6 +234,14 @@ function InfoRow({ title, value }) {
             <span>{value}</span>
         </div>
     );
+}
+
+function formatTokenAmount(amount, symbol) {
+    if (!amount || isNaN(amount)) return `0${symbol}`;
+    const num = parseFloat(amount);
+    const rounded = Math.round(num * 1000) / 1000; // round to 3 decimal places
+    const final = rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toString();
+    return `${final}${symbol}`;
 }
 
 function formatDate(isoDate) {
@@ -215,4 +258,80 @@ function formatDate(isoDate) {
 
 function removeAtUsername(text) {
     return text.replace(/^@\S+\s*/, '');
+}
+
+function BalanceSection({ title, address, chains, isOpen, onToggle }) {
+    const [openChain, setOpenChain] = useState(null);
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = (e) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(address);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    const toggleChain = (chain) => {
+        setOpenChain(openChain === chain ? null : chain);
+    };
+
+    return (
+        <div className="border-y border-gray-700 py-4">
+            <div
+                className="flex items-center cursor-pointer"
+                onClick={onToggle}
+            >
+                <span className="text-lg text-white font-medium flex-1">{title}</span>
+
+                <div className="flex flex-col items-end" onClick={(e) => e.stopPropagation()}>
+                    <button
+                        onClick={handleCopy}
+                        className="bg-gray-800 text-white px-3 py-1 rounded text-sm border border-gray-600 font-mono hover:bg-gray-700 transition"
+                        title="Click to copy"
+                    >
+                        {shortenAddress(address)}
+                    </button>
+                    {copied && <span className="text-xs text-green-400 mt-1">Copied!</span>}
+                </div>
+
+                <span className="ml-3">
+                    {isOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                </span>
+            </div>
+
+            {isOpen && (
+                <div className="mt-4 space-y-4 pl-8">
+                    {Object.entries(chains).map(([chain, tokens]) => (
+                        <div key={chain}>
+                            <div
+                                className="flex justify-between items-center cursor-pointer"
+                                onClick={() => toggleChain(chain)}
+                            >
+                                <span className="text-gray-300 font-medium">{chain}</span>
+                                {openChain === chain ? (
+                                    <ChevronDown size={16} />
+                                ) : (
+                                    <ChevronRight size={16} />
+                                )}
+                            </div>
+
+                            {openChain === chain && (
+                                <ul className="ml-4 mt-2 space-y-1">
+                                    {Array.isArray(tokens) && tokens.map(({ name, symbol, amount }) => (
+                                        <li
+                                            key={name + symbol}
+                                            className="flex justify-between text-sm text-gray-200"
+                                        >
+                                            <span>{capitalize(name)}</span>
+                                            <span className="font-mono">{formatTokenAmount(amount, symbol)}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
 }
